@@ -1,0 +1,7 @@
+services:
+  app:
+    image: ghcr.io/kanzennn/mapid-study-case-fe:latest
+    container_name: report-case-study-fe
+    restart: unless-stopped
+    ports:
+      - "${FE_PORT:-8080}:80"
