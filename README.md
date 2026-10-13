@@ -62,6 +62,43 @@ VITE_API_BASE_URL=https://api.report.studycase.kanzen.my.id/api/v1
 | globals | ^17.12.0 | Browser globals for ESLint |
 | @types/node, @types/react, @types/react-dom | - | Type definitions |
 
+## Deployment
+
+The app is built into a static bundle and served by nginx (`Dockerfile`, `nginx.conf`). Every push to `main` runs the GitHub Actions workflow in `.github/workflows/deploy.yml`:
+
+1. **test** - install, lint, type-check and build.
+2. **build-and-push** - build the Docker image and push it to `ghcr.io/kanzennn/mapid-study-case-fe` (`latest` and the commit SHA).
+3. **deploy** - SSH into the server, then `docker compose pull` and `docker compose up -d`.
+
+`VITE_API_BASE_URL` is baked in at build time. It defaults to `https://api.report.studycase.kanzen.my.id/api/v1`; set a repository variable with the same name to override it.
+
+### Repository secrets
+
+| Secret | Description |
+|---|---|
+| `CR_PAT` | GitHub token with `write:packages` to push to GHCR |
+| `SSH_HOST`, `SSH_PORT`, `SSH_USER` | Server connection |
+| `SSH_PRIVATE_KEY` | Private key allowed to log in as `SSH_USER` |
+| `DEPLOY_PATH` | Folder on the server that contains `docker-compose.yml` |
+
+### Server setup (once)
+
+Copy `docker-compose.yml` to `DEPLOY_PATH` and log in to GHCR so the server can pull the image:
+
+```bash
+docker login ghcr.io -u <github-username>
+docker compose up -d
+```
+
+The container listens on port `8080` by default (set `FE_PORT` to change it). Point the reverse proxy for `report.studycase.kanzen.my.id` to that port.
+
+To build and run the image locally:
+
+```bash
+docker build -t mapid-study-case-fe .
+docker run --rm -p 8080:80 mapid-study-case-fe
+```
+
 ## Architecture
 
 The app follows clean architecture: dependencies point inward, and the domain/application layer (`modules/`) has no knowledge of React or the UI.
